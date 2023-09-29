@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import matplotlib.pyplot as plt
-
+import plotly.graph_objs as go
 st.set_page_config(page_title="Dashboard",page_icon="🌍",layout="wide",)
 #st.set_page_config(page_title="Encuesta Oficial delivery ") 
 st.header('Resultados Encuestas Nacionales  delivery Bolivia 2023') 
