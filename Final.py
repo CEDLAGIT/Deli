@@ -3,11 +3,16 @@ import streamlit as st
 import plotly.express as px
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
+import seaborn as sns
+from plotly.subplots import make_subplots
+import plotly.figure_factory as ff
 st.set_page_config(page_title="Dashboard",page_icon="🌍",layout="wide",)
 #st.set_page_config(page_title="Encuesta Oficial delivery ") 
+
 st.header('Resultados Encuestas Nacionales  delivery Bolivia 2023') 
 st.subheader('delivery Bolivia 2023') 
-
+with open('style.css')as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html = True)
 @st.cache_data
 def cargar_datos():
     df = pd.read_spss("BaseFinal.sav")
@@ -16,37 +21,49 @@ def cargar_datos():
         .repeat(df['WPESO'])\
         .reset_index()
     return df
+page_bg_img = f"""
+<style>
+[data-testid="stAppViewContainer"] > .main {{
+background-image: url("http://cedla.org/wp-content/uploads/2023/10/fondo.png");
 
+background-position: top left;
+background-repeat: repeat;
+
+}}
+</style>
+"""
+st.markdown(page_bg_img, unsafe_allow_html=True)
 df=cargar_datos()
+
 Genero = df['sexo'].unique().tolist()
 df['edad'] = df['edad'].astype(int)
 edad=df['edad'].unique().tolist()
 Ciudad = df['ciudad'].unique().tolist()
-style_image2 = """
-width:300px;
-height:300px;
-display: block;
-justify-content: center;
-border-radius: 30%;
-"""
+
 with st.sidebar:
-    st.markdown(
-    f'<img src="{"cedla.png"}" style="{style_image2}">',
-    unsafe_allow_html=True,
-)
+    st.image("cedla.png", use_column_width=True,width=100)
     st.header('Resultados Encuestas Nacionales  delivery Bolivia 2023') 
     st.markdown('Los trabajos de reparto surgen de los nuevos tipos de trabajos de la economía “Gig”.  Los repartidores desempeñan un papel fundamental para garantizar la circulación fluida de los bienes de las empresas a los consumidores.Bolivia, este fenómeno también está presente. ',)
     edad_selector = st.slider("Edad persona encuestada:",
                           min_value = min(edad), #el valor minimo va a ser el valor mas pequeño que encuentre dentro de la columna EDAD PERSONA ENCUESTADA
                           max_value = max(edad),#el valor maximo va a ser el valor mas grande que encuentre dentro de la columna EDAD PERSONA ENCUESTADA
                           value = (min(edad),max(edad)))
-    calificacion_ciudad = st.multiselect('Ciudad:',
-                                       Ciudad,
-                                       default = Ciudad)
-    calificacion_genero = st.multiselect('Género:',
-                                       Genero,
-                                       default = Genero)
+    Generos=['Hombre','Mujer']
+    calificacion_genero =[]
+    for genero in Generos:
+        if st.checkbox(genero,value=True):
+         calificacion_genero.append(genero)   
+    
+    ciudades = ['La Paz', 'El Alto', 'Santa Cruz','Cochabamba']
+    st.write("Ciudades:")
+# Crear casillas de verificación para cada ciudad
+    seleccionadas = []
+    for ciudad in ciudades:
+        if st.checkbox(ciudad,value=True):
+         seleccionadas.append(ciudad)
 
+# Imprimir las ciudades seleccionadas
+    
 def P(p20a):
     if p20a == 'Mejores posibilidades de ingreso':
         return 'Mejores posibilidades de ingreso' 
@@ -138,7 +155,21 @@ def o(edad):
         return "joven adulto"
     else:
         return "adulto"    
-
+def years_of_study2(educacion):
+    if educacion == 'Ninguno':
+        return 0
+    if educacion == 'Primaria completa':
+        return 5
+    if educacion == 'Secundaria incompleta':
+        return 10
+    if educacion == 'Secundaria completa':
+        return 11
+    if educacion == 'Superior incompleta (técnico/ universitario)':
+        return 13
+    if educacion == 'Superior completa (técnico/ universitario)':
+        return 15
+    else:
+        return 16
 column_headers = list(df.columns.values)
 df['dependencia'] = df['p65'].astype(int)
 df['dependencia'] = df['dependencia'].apply(d)
@@ -155,6 +186,12 @@ df['gastos'] = df['mantenimiento'] + df['p66a'] + df['p66b']
 df['ingresom'] = df['p60a1'].apply(x)
 df['ingresor'] = df['ingresom'] - df['gastos']
 df['categoria'] = df['ingresor'].apply(lambda x: 'Mínimo' if x < 2250 else 'Medio' if x < 4500 else 'Alto')
+
+df3 = df[['categoria','p4']]
+df3['educacion'] = df3['p4'].apply(years_of_study2)
+df3['Horarios']=df['P72HRS']
+df3.drop(columns=['p4'], inplace=True)
+df3.to_csv('datos/nombre_del_archivo.csv', index=False)
 df['years of study'] = df['p4'].apply(years_of_study)
 df.rename(columns={'years of study':'educacion'}, inplace=True)
 df['jefe'] = df['p8'].apply(jefe)
@@ -197,7 +234,7 @@ fig.update_layout(title='Edad de los repartidores ', margin=dict(l=50, r=50, b=5
 left,center,right=st.columns(3)
 center.plotly_chart(fig,use_container_width=True)
 
-mask = (df2['edad'].between(*edad_selector))&(df['sexo'].isin(calificacion_genero))
+mask = (df2['edad'].between(*edad_selector))&(df['sexo'].isin(calificacion_genero))&(df['ciudad'].isin(seleccionadas))
 numero_resultados = df2[mask].shape[0]
 
 
@@ -207,11 +244,11 @@ df_agrupado =df_agrupado.rename(columns={'edad': 'Numero de repartidores'})
 df_agrupado =df_agrupado.rename(columns={'PrimeroTrabajo': 'Fuente CEDLA encuesta delivery 2022'})
 suma_edades = df_agrupado['Numero de repartidores'].sum( )
 df_agrupado['Porcentaje'] = ((df_agrupado['Numero de repartidores'] / suma_edades) * 100).round(0).astype(int)
-
+colores_personalizados = ['#ff4e50'] 
+if len(df_agrupado) == 2:
+    colores_personalizados = ['#ff4e50','#fc913a']  # Longitud 1
 if len(df_agrupado) == 1:
-    colores_personalizados = ['#ff4e50']  # Longitud 1
-else:
-    colores_personalizados = ['#ff4e50', '#fc913a',]  # Longitud 2
+    colores_personalizados = ['#ff4e50']  # Longitud 2
 df_agrupado['color'] = colores_personalizados
 bar_chart = px.bar(df_agrupado, 
                    x='Fuente CEDLA encuesta delivery 2022',
@@ -220,9 +257,17 @@ bar_chart = px.bar(df_agrupado,
                    color='color',
                    color_discrete_sequence=colores_personalizados,
                    template = 'plotly_white')
+bar_chart.update_traces(textfont=dict(size=15))
 bar_chart.update_layout(showlegend=False,title='Porcentaje de repartidores que tenían un trabajo anterior.')
 
-mask4 = (df2['edad'].between(*edad_selector))&(df['ciudad'].isin(calificacion_ciudad))&(df['sexo'].isin(calificacion_genero))
+
+
+
+
+
+
+
+mask4 = (df2['edad'].between(*edad_selector))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
 numero_resultados4 = df[mask4].shape[0]
 
 df_agrupado4 = df[mask4].groupby(by=['pluriactividad']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
@@ -248,9 +293,8 @@ bar_chartP = px.bar(df_agrupado4,
                    color_discrete_sequence=colores_personalizados,
                    template='plotly_white',
                    category_orders={"Fuente CEDLA encuesta delivery 2022":["Mejores posibilidades de ingreso","Mayor libertad de horario","Otros","Era la única opción de trabajo" ]})
+bar_chartP.update_traces(textfont=dict(size=15))
 bar_chartP.update_layout(showlegend=False,title='Repartidores y pluriactividad')
-
-
 
 df['m'] = df['p20a'].apply(P)
 st.subheader('Razones para volverse repartidor') 
@@ -258,7 +302,7 @@ Razon= df['m'].unique().tolist()
 opciones_seleccionadas = st.multiselect('Razones:',
                                        Razon,
                                        default = Razon)
-mask4 = (df2['edad'].between(*edad_selector))& (df['m'].isin(opciones_seleccionadas))&(df['ciudad'].isin(calificacion_ciudad))&(df['sexo'].isin(calificacion_genero))
+mask4 = (df2['edad'].between(*edad_selector))& (df['m'].isin(opciones_seleccionadas))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
 numero_resultados4 = df[mask4].shape[0]
 
 df_agrupado4 = df[mask4].groupby(by=['m']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
@@ -284,10 +328,11 @@ bar_chart4 = px.bar(df_agrupado4,
                    color_discrete_sequence=colores_personalizados,
                    template='plotly_white',
                    category_orders={"Fuente CEDLA encuesta delivery 2022":["Mejores posibilidades de ingreso","Mayor libertad de horario","Otros","Era la única opción de trabajo" ]})
+bar_chart4.update_traces(textfont=dict(size=15))
 bar_chart4.update_layout(showlegend=False)
 left,right=st.columns(2)
 left.plotly_chart(bar_chart,use_container_width=True)
-right.plotly_chart(bar_chartP,use_container_width=False)
+right.plotly_chart(bar_chartP,use_container_width=True)
 st.subheader('Ingreso según el nivel de estudio') 
 edad2=df2['edad'].unique().tolist()
 Nivel_Estudio = df['educacion'].unique().tolist()
@@ -296,7 +341,7 @@ calificacion_Estudio = st.multiselect('Estudio:',
                                        Nivel_Estudio,
                                        default = Nivel_Estudio)
 
-mask2 = (df2['edad'].between(*edad_selector))& (df['educacion'].isin(calificacion_Estudio))&(df['ciudad'].isin(calificacion_ciudad))&(df['sexo'].isin(calificacion_genero))
+mask2 = (df2['edad'].between(*edad_selector))& (df['educacion'].isin(calificacion_Estudio))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
 numero_resultados2 = df[mask2].shape[0]
 
 df_agrupado2 = df2[mask2].groupby(by=['educacion']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
@@ -324,6 +369,7 @@ bar_chart2 = px.bar(df_agrupado2,
                    template = 'plotly_white',
                    category_orders={"Fuente CEDLA encuesta delivery 2022":["Secundario","Superior incompleta","Superior" ]}
                    )
+bar_chart2.update_traces(textfont=dict(size=15))
 bar_chart2.update_layout(showlegend=False,title="Nivel de estudios de los delivery")
 
 # Ingresos
@@ -335,7 +381,7 @@ calificacion_ingresor = st.multiselect('Ingreso:',
                                        Nivel_Ingreso,
                                        default = Nivel_Ingreso)
 
-mask3 = (df2['edad'].between(*edad_selector))& (df2['categoria'].isin(calificacion_ingresor))&(df['ciudad'].isin(calificacion_ciudad))&(df['sexo'].isin(calificacion_genero))
+mask3 = (df2['edad'].between(*edad_selector))& (df2['categoria'].isin(calificacion_ingresor))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
 numero_resultados3 = df[mask3].shape[0]
 
 df_agrupado3 = df2[mask3].groupby(by=['categoria']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
@@ -361,7 +407,9 @@ bar_chart3 = px.bar(df_agrupado3,
                    color_discrete_sequence=colores_personalizados,  # Asigna los colores personalizados aquí
                    template='plotly_white'
                   )
-bar_chart3.update_layout(showlegend=False,title='Nivel de ingresos de los deliverys ',)
+bar_chart3.update_traces(textfont=dict(size=15))
+bar_chart3.update_layout(showlegend=False,title='Nivel de ingresos de los deliverys ')
+
 mensaje3 = f"Mínimo hace referencia a que el repartidos gana hasta un salario mínimo, medio hasta dos salarios mínimos y superior gana más de dos salarios mínimos. "
 left,right=st.columns(2)
 left.plotly_chart(bar_chart2,use_container_width=True)
@@ -377,5 +425,62 @@ ruta_imagen = "wordcloud.png"  # Reemplaza esto con la ruta real de tu imagen
 st.subheader('Motivación para trabajar como delivery') 
 left,right=st.columns(2)
 left.plotly_chart(bar_chart4,use_container_width=True)
-right.image(ruta_imagen, use_column_width=False,width=700)
+right.image(ruta_imagen, use_column_width=False,width=500)
+left,right,center=st.columns(3)
+if left.button("18 a 24", type="primary",use_container_width=True ,key="age_1"):
+   st.image("18 a 24.jpg", use_column_width=True,width=100)
+if right.button("25 a 29",type="primary",use_container_width=True,key="age_2"):
+   st.image("25 a 29.jpg", use_column_width=True,width=1200)
+if center.button("30 a 50", type="primary",use_container_width=True,key="age_3"):
+   st.image("30 a 50.jpg", use_column_width=True,width=50)
 
+
+educacionm= df3['educacion'].unique().tolist()
+grouped_data = df3.groupby('categoria')['Horarios'].mean().reset_index()
+# Crear una figura de Plotly con un gráfico de líneas y marcadores para 'Horarios'
+fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+# Agregar una traza de tipo 'go.Scatter' para 'Horas' en el eje izquierdo
+fig.add_trace(
+    go.Scatter(
+        x=grouped_data['categoria'],
+        y=grouped_data['Horarios'],
+        mode='lines+markers',  # Indica que queremos una línea con marcadores
+        name='Horas',  # Nombre para la primera línea
+        line=dict(color="coral"),  # Color para la línea de 'Horas'
+        marker=dict(color="coral", size=10),
+        text=grouped_data['Horarios'],  # Etiquetas de texto para los puntos
+        textposition='top right',  # Coloca las etiquetas en la parte superior derecha
+    ),
+    secondary_y=False  # Asigna esta traza al eje y principal (izquierdo)
+)
+
+# Agregar una traza de tipo 'go.Scatter' para 'Educación' en el eje derecho
+fig.add_trace(
+    go.Scatter(
+        x=grouped_data['categoria'],
+        y=educacionm,
+        mode='lines+markers',  # Indica que queremos una línea con marcadores
+        name='Educación',  # Nombre para la segunda línea
+        line=dict(color="blue"),  # Color para la línea de 'Educación'
+        marker=dict(color="blue", size=10),
+        text=educacionm,  # Etiquetas de texto para los puntos
+        textposition='top left',  # Coloca las etiquetas en la parte superior izquierda
+      
+    ),
+    secondary_y=True  # Asigna esta traza al eje y secundario (derecho)
+)
+
+# Personalizar el diseño del gráfico
+fig.update_xaxes(categoryorder="array", categoryarray=["Mínimo", "Medio", "Alto"])
+fig.update_yaxes(title_text="Horas Trabajadas", secondary_y=False)
+fig.update_yaxes(title_text="Educación", secondary_y=True)
+fig.update_layout(
+    xaxis_title='Ingresor Category',
+    title='Comparación entre Horas y Educación por Categoría de Ingresor',
+   
+)
+
+# Mostrar el gráfico con ambas líneas
+
+st.plotly_chart(fig)
