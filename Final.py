@@ -191,7 +191,7 @@ df3 = df[['categoria','p4']]
 df3['educacion'] = df3['p4'].apply(years_of_study2)
 df3['Horarios']=df['P72HRS']
 df3.drop(columns=['p4'], inplace=True)
-df3.to_csv('datos/nombre_del_archivo.csv', index=False)
+
 df['years of study'] = df['p4'].apply(years_of_study)
 df.rename(columns={'years of study':'educacion'}, inplace=True)
 df['jefe'] = df['p8'].apply(jefe)
