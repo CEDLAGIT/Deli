@@ -43,7 +43,7 @@ Ciudad = df['ciudad'].unique().tolist()
 with st.sidebar:
     st.image("cedla.png", use_column_width=True,width=100)
     st.header('Resultados Encuestas Nacionales  delivery Bolivia 2023') 
-    st.markdown('Los trabajos de reparto surgen de los nuevos tipos de trabajos de la economía “Gig”.  Los repartidores desempeñan un papel fundamental para garantizar la circulación fluida de los bienes de las empresas a los consumidores.Bolivia, este fenómeno también está presente. ',)
+    st.markdown('Los trabajos de reparto surgen de los nuevos tipos de trabajos de la economía “Gig”.  Los repartidores desempeñan un papel fundamental para garantizar la circulación fluida de los bienes de las empresas a los consumidores. En Bolivia, este fenómeno también está presente. ',)
     edad_selector = st.slider("Edad persona encuestada:",
                           min_value = min(edad), #el valor minimo va a ser el valor mas pequeño que encuentre dentro de la columna EDAD PERSONA ENCUESTADA
                           max_value = max(edad),#el valor maximo va a ser el valor mas grande que encuentre dentro de la columna EDAD PERSONA ENCUESTADA
@@ -191,7 +191,7 @@ df3 = df[['categoria','p4']]
 df3['educacion'] = df3['p4'].apply(years_of_study2)
 df3['Horarios']=df['P72HRS']
 df3.drop(columns=['p4'], inplace=True)
-
+df3.to_csv('datos/nombre_del_archivo.csv', index=False)
 df['years of study'] = df['p4'].apply(years_of_study)
 df.rename(columns={'years of study':'educacion'}, inplace=True)
 df['jefe'] = df['p8'].apply(jefe)
@@ -297,39 +297,9 @@ bar_chartP.update_traces(textfont=dict(size=15))
 bar_chartP.update_layout(showlegend=False,title='Repartidores y pluriactividad')
 
 df['m'] = df['p20a'].apply(P)
-st.subheader('Razones para volverse repartidor') 
+st.subheader('Repartidores con trabajo anterior y pluriactividad') 
 Razon= df['m'].unique().tolist()
-opciones_seleccionadas = st.multiselect('Razones:',
-                                       Razon,
-                                       default = Razon)
-mask4 = (df2['edad'].between(*edad_selector))& (df['m'].isin(opciones_seleccionadas))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
-numero_resultados4 = df[mask4].shape[0]
 
-df_agrupado4 = df[mask4].groupby(by=['m']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
-df_agrupado4 =df_agrupado4.reset_index()
-suma_edades4 = df_agrupado4['edad'].sum( )
-
-df_agrupado4['Porcentaje'] = ((df_agrupado4['edad'] / suma_edades4) * 100).round(0).astype(int)
-if len(df_agrupado4)==4:
-    colores_personalizados = ['#ff4e50', '#fc913a', '#f9d423','#ecec53']
-if len(df_agrupado4) == 3:
-    colores_personalizados = ['#ff4e50', '#fc913a', '#f9d423']
-if len(df_agrupado4)==2:
-    colores_personalizados = ['#ff4e50', '#fc913a']
-if len(df_agrupado4)==1:
-    colores_personalizados = ['#ff4e50']
-df_agrupado4['color'] = colores_personalizados
-df_agrupado4 =df_agrupado4.rename(columns={'m': 'Fuente CEDLA encuesta delivery 2022'})
-bar_chart4 = px.bar(df_agrupado4, 
-                   x='Fuente CEDLA encuesta delivery 2022',
-                   y='Porcentaje',
-                   text='Porcentaje',
-                   color='color',
-                   color_discrete_sequence=colores_personalizados,
-                   template='plotly_white',
-                   category_orders={"Fuente CEDLA encuesta delivery 2022":["Mejores posibilidades de ingreso","Mayor libertad de horario","Otros","Era la única opción de trabajo" ]})
-bar_chart4.update_traces(textfont=dict(size=15))
-bar_chart4.update_layout(showlegend=False)
 left,right=st.columns(2)
 left.plotly_chart(bar_chart,use_container_width=True)
 right.plotly_chart(bar_chartP,use_container_width=True)
@@ -409,30 +379,64 @@ bar_chart3 = px.bar(df_agrupado3,
                   )
 bar_chart3.update_traces(textfont=dict(size=15))
 bar_chart3.update_layout(showlegend=False,title='Nivel de ingresos de los deliverys ')
-
-mensaje3 = f"Mínimo hace referencia a que el repartidos gana hasta un salario mínimo, medio hasta dos salarios mínimos y superior gana más de dos salarios mínimos. "
 left,right=st.columns(2)
 left.plotly_chart(bar_chart2,use_container_width=True)
 right.plotly_chart(bar_chart3,use_container_width=True)
+st.markdown('<p style="color: white;">Mínimo hace referencia a que el repartidor ganó hasta un salario mínimo. Medio nos dice que el delivery ganó entre uno y dos salarios mínimos. Alto significa que el trabajador de plataforma tuvo ingresos de más de dos salarios mínimos..</p>',unsafe_allow_html=True)
+
 dff = df[['razones']]
 dff.dropna()
 dff['razones'] = dff['razones'].astype(str)
 text = ' '.join(dff['razones'].astype(str))
 # Create the WordCloud
-ruta_imagen = "wordcloud.png"  # Reemplaza esto con la ruta real de tu imagen
+st.subheader('Motivación para trabajar como delivery') 
 
 # Muestra la imagen en la aplicación de Streamlit
-st.subheader('Motivación para trabajar como delivery') 
+opciones_seleccionadas = st.multiselect('Motivos:',
+                                       Razon,
+                                       default = Razon)
+mask4 = (df2['edad'].between(*edad_selector))& (df['m'].isin(opciones_seleccionadas))&(df['ciudad'].isin(seleccionadas))&(df['sexo'].isin(calificacion_genero))
+numero_resultados4 = df[mask4].shape[0]
+
+df_agrupado4 = df[mask4].groupby(by=['m']).count()[['edad']] #que me agrupe por CALIFICACION y me cuente por los datos de  EDAD PERSONA ENCUESTADA
+df_agrupado4 =df_agrupado4.reset_index()
+suma_edades4 = df_agrupado4['edad'].sum( )
+
+df_agrupado4['Porcentaje'] = ((df_agrupado4['edad'] / suma_edades4) * 100).round(0).astype(int)
+if len(df_agrupado4)==4:
+    colores_personalizados = ['#ff4e50', '#fc913a', '#f9d423','#ecec53']
+if len(df_agrupado4) == 3:
+    colores_personalizados = ['#ff4e50', '#fc913a', '#f9d423']
+if len(df_agrupado4)==2:
+    colores_personalizados = ['#ff4e50', '#fc913a']
+if len(df_agrupado4)==1:
+    colores_personalizados = ['#ff4e50']
+df_agrupado4['color'] = colores_personalizados
+df_agrupado4 =df_agrupado4.rename(columns={'m': 'Fuente CEDLA encuesta delivery 2022'})
+bar_chart4 = px.bar(df_agrupado4, 
+                   x='Fuente CEDLA encuesta delivery 2022',
+                   y='Porcentaje',
+                   text='Porcentaje',
+                   color='color',
+                   color_discrete_sequence=colores_personalizados,
+                   template='plotly_white',
+                   category_orders={"Fuente CEDLA encuesta delivery 2022":["Mejores posibilidades de ingreso","Mayor libertad de horario","Otros","Era la única opción de trabajo" ]})
+bar_chart4.update_traces(textfont=dict(size=15))
+bar_chart4.update_layout(showlegend=False)
+
 left,right=st.columns(2)
 left.plotly_chart(bar_chart4,use_container_width=True)
-right.image(ruta_imagen, use_column_width=False,width=500)
+
+st.subheader("Click en el boton para ver la imagen")
 left,right,center=st.columns(3)
+
 if left.button("18 a 24", type="primary",use_container_width=True ,key="age_1"):
-   st.image("18 a 24.jpg", use_column_width=True,width=100)
+   imagen=st.image("18 a 24.jpg", use_column_width=True,width=100)
 if right.button("25 a 29",type="primary",use_container_width=True,key="age_2"):
-   st.image("25 a 29.jpg", use_column_width=True,width=1200)
+   
+   imagen=st.image("25 a 29.jpg", use_column_width=True,width=1200)
 if center.button("30 a 50", type="primary",use_container_width=True,key="age_3"):
-   st.image("30 a 50.jpg", use_column_width=True,width=50)
+   imagen=st.image("30 a 50.jpg", use_column_width=True,width=50)
 
 
 educacionm= df3['educacion'].unique().tolist()
@@ -476,11 +480,9 @@ fig.update_xaxes(categoryorder="array", categoryarray=["Mínimo", "Medio", "Alto
 fig.update_yaxes(title_text="Horas Trabajadas", secondary_y=False)
 fig.update_yaxes(title_text="Educación", secondary_y=True)
 fig.update_layout(
-    xaxis_title='Ingresor Category',
-    title='Comparación entre Horas y Educación por Categoría de Ingresor',
-   
+    xaxis_title='Ingreso por salario mínimo'  
 )
 
 # Mostrar el gráfico con ambas líneas
-
+st.subheader("Educación y cantidad de horas trabajadas por los delivery")
 st.plotly_chart(fig)
